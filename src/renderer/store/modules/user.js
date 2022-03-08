@@ -1,10 +1,11 @@
+import store from '..'
 import {
   login,
   getInfo
 } from '../../api/user/index'
 import {
   getToken,
-  removeToken
+  setToken
 } from '../../utils/auth'
 
 const user = {
@@ -149,8 +150,9 @@ const user = {
           const data = response.data
           setToken(data.token)
           commit('SET_TOKEN', data.token)
-          this.$store.dispatch("GetUserInfo");
-          resolve()
+          resolve(
+            store.dispatch("GetUserInfo")
+          )
         }).catch(error => {
           reject(error)
         })
@@ -174,7 +176,6 @@ const user = {
           commit("SET_OFFICE", data.data.belongTo);
           commit("SET_STUDENTID", data.data.student);
           commit("SET_AVATAR", data.data.avatar);
-
           commit("SET_TYPE", data.data.userType);
           resolve();
         })

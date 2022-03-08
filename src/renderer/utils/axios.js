@@ -56,7 +56,6 @@ export default ({
       return Promise.reject(err);
     }
   );
-
   // 每次请求都会先经过这个函数 请求拦截器
   request.interceptors.request.use(
     config => {
@@ -72,5 +71,7 @@ export default ({
       console.log(error); // for debug
       return Promise.reject(error);
     }
-  );
-};
+  )
+}
+
+  
