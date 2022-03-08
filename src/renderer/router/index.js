@@ -7,12 +7,11 @@ export default new Router({
   routes: [
     {
       path: '/',
-      name: 'landing-page',
-      component: require('@/components/LandingPage').default
+      component: require('../pages/login.vue').default
     },
     {
-      path: '*',
-      redirect: '/'
-    }
+      path: '/examination',
+      component: () => import('../pages/examination.vue')
+    },
   ]
 })
