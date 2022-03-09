@@ -1,16 +1,16 @@
 import Cookies from 'js-cookie'
 
-const TokenKey = 'jxpt_token'
+const TokenKey = 'jwt_token'
 
 export function getToken () {
   return Cookies.get(TokenKey) || ''
 }
 
 export function setToken (token) {
-  Cookies.set(TokenKey, token, {path: "/"})
+  Cookies.set(TokenKey, token)
 }
 
 export function removeToken () {
-  Cookies.remove(TokenKey, {path: "/"})
+  Cookies.remove(TokenKey)
 }
 

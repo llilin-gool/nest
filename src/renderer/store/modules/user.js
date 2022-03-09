@@ -1,4 +1,3 @@
-import store from '..'
 import {
   login,
   getInfo
@@ -148,15 +147,13 @@ const user = {
       return new Promise((resolve, reject) => {
         login({username, password}).then(response => {
           const data = response.data
-          setToken(data.token)
-          commit('SET_TOKEN', data.token)
-          resolve(
-            store.dispatch("GetUserInfo")
-          )
+          setToken(data.data.token)
+          commit('SET_TOKEN', data.data.token)
+          resolve(data.code)
         }).catch(error => {
-          reject(error)
-        })
-      })
+          console.log(error);
+          reject(error.response.status)
+        }) })
     },
 
     // 获取用户信息

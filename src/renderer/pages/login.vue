@@ -7,30 +7,25 @@
       ref="loginForm"
       label-position="left"
     >
-      <h3 class="title">考试系统</h3>
+      <h2 class="title">考试系统</h2>
       <el-form-item prop="username">
-        <span class="svg-container svg-container_login">
-          <svg-icon icon-class="user" />
-        </span>
         <el-input
           name="username"
           type="text"
+          prefix-icon="el-icon-user"
           v-model="loginForm.username"
           autoComplete="on"
-          placeholder="username"
+          placeholder="学号"
         />
       </el-form-item>
       <el-form-item prop="password">
-        <span class="svg-container">
-          <svg-icon icon-class="password"></svg-icon>
-        </span>
         <el-input
           name="password"
           :type="pwdType"
           @keyup.enter.native="handleLogin"
           v-model="loginForm.password"
           autoComplete="on"
-          placeholder="password"
+          placeholder="密码"
         ></el-input>
         <span class="show-pwd" @click="showPwd"
           ><svg-icon icon-class="eye"
@@ -75,48 +70,25 @@ export default {
         this.pwdType = "password";
       }
     },
-    handleLogin() {
+    async handleLogin() {
       this.loading = true;
-      this.$store.dispatch("Login", this.loginForm);
-      this.loading = false;
-      this.$router.push({ path: "/examination" });
+      const res = await this.$store.dispatch("Login", this.loginForm);
+      if (res == 2000) {
+        this.loading = false;
+        this.$message({
+          message: "登陆成功",
+          type: "success",
+        });
+        this.$router.push({ path: "/examination" });
+      } else if (res == 400) {
+        this.loading = false;
+        this.$message.error("账号或密码错误");
+      }
     },
   },
 };
 </script>
 
-<style rel="stylesheet/scss" lang="scss">
-$bg: #2d3a4b;
-$light_gray: #eee;
-
-/* reset element-ui css */
-.login-container {
-  .el-input {
-    display: inline-block;
-    height: 47px;
-    width: 85%;
-    input {
-      background: transparent;
-      border: 0px;
-      -webkit-appearance: none;
-      border-radius: 0px;
-      padding: 12px 5px 12px 15px;
-      color: $light_gray;
-      height: 47px;
-      &:-webkit-autofill {
-        -webkit-box-shadow: 0 0 0px 1000px $bg inset !important;
-        -webkit-text-fill-color: #fff !important;
-      }
-    }
-  }
-  .el-form-item {
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(0, 0, 0, 0.1);
-    border-radius: 5px;
-    color: #454545;
-  }
-}
-</style>
 
 <style rel="stylesheet/scss" lang="scss" scoped>
 $bg: #2d3a4b;
@@ -156,7 +128,7 @@ $light_gray: #eee;
     }
   }
   .title {
-    font-size: 26px;
+    font-size: 36px;
     font-weight: 400;
     color: $light_gray;
     margin: 0px auto 40px auto;
