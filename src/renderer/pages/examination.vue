@@ -6,7 +6,6 @@
 <script>
 export default {
   created(){
-       this.$store.dispatch("GetUserInfo")
   }
 }
 </script>

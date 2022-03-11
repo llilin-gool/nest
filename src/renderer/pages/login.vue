@@ -73,14 +73,16 @@ export default {
     async handleLogin() {
       this.loading = true;
       const res = await this.$store.dispatch("Login", this.loginForm);
-      if (res == 2000) {
+      console.log(res);
+      if (res.code == 2000) {
         this.loading = false;
         this.$message({
           message: "登陆成功",
           type: "success",
         });
         this.$router.push({ path: "/examination" });
-      } else if (res == 400) {
+       this.$store.dispatch("GetUserInfo")
+      } else{
         this.loading = false;
         this.$message.error("账号或密码错误");
       }
