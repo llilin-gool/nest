@@ -1,5 +1,6 @@
 <template>
   <div>
+<<<<<<< HEAD
 
     <el-menu class="el-menu-demo"
              mode="horizontal"
@@ -77,4 +78,18 @@ export default {
   position: relative;
   left: 70%;
 }
+=======
+  </div>
+</template>
+
+<script>
+export default {
+  created(){
+  }
+}
+</script>
+
+<style>
+
+>>>>>>> 8d320a7c4736e372fb87d3fadf53b71e200b6ea7
 </style>
