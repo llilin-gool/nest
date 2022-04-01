@@ -1,43 +1,36 @@
 <template>
   <div class="login-container">
-    <el-form
-      class="login-form"
-      autoComplete="on"
-      :model="loginForm"
-      ref="loginForm"
-      label-position="left"
-    >
+    <el-form class="login-form"
+             autoComplete="on"
+             :model="loginForm"
+             ref="loginForm"
+             label-position="left">
       <h2 class="title">考试系统</h2>
       <el-form-item prop="username">
-        <el-input
-          name="username"
-          type="text"
-          prefix-icon="el-icon-user"
-          v-model="loginForm.username"
-          autoComplete="on"
-          placeholder="学号"
-        />
+        <el-input name="username"
+                  type="text"
+                  prefix-icon="el-icon-user"
+                  v-model="loginForm.username"
+                  autoComplete="on"
+                  placeholder="学号" />
       </el-form-item>
       <el-form-item prop="password">
-        <el-input
-          name="password"
-          :type="pwdType"
-          @keyup.enter.native="handleLogin"
-          v-model="loginForm.password"
-          autoComplete="on"
-          placeholder="密码"
-        ></el-input>
-        <span class="show-pwd" @click="showPwd"
-          ><svg-icon icon-class="eye"
-        /></span>
+        <el-input name="password"
+                  :type="pwdType"
+                  @keyup.enter.native="handleLogin"
+                  v-model="loginForm.password"
+                  autoComplete="on"
+                  placeholder="密码"></el-input>
+        <span class="show-pwd"
+              @click="showPwd">
+          <svg-icon icon-class="eye" />
+        </span>
       </el-form-item>
       <el-form-item>
-        <el-button
-          type="primary"
-          style="width: 100%"
-          :loading="loading"
-          @click.native.prevent="handleLogin"
-        >
+        <el-button type="primary"
+                   style="width: 100%"
+                   :loading="loading"
+                   @click.native.prevent="handleLogin">
           登录
         </el-button>
       </el-form-item>
@@ -52,25 +45,25 @@
 <script>
 export default {
   name: "login",
-  data() {
+  data () {
     return {
       loginForm: {
-        username: "2020414315",
-        password: "Ll010705",
+        username: "",
+        password: "",
       },
       loading: false,
       pwdType: "password",
     };
   },
   methods: {
-    showPwd() {
+    showPwd () {
       if (this.pwdType === "password") {
         this.pwdType = "";
       } else {
         this.pwdType = "password";
       }
     },
-    async handleLogin() {
+    async handleLogin () {
       this.loading = true;
       const res = await this.$store.dispatch("Login", this.loginForm);
       console.log(res);
@@ -81,8 +74,8 @@ export default {
           type: "success",
         });
         this.$router.push({ path: "/examination" });
-       this.$store.dispatch("GetUserInfo")
-      } else{
+        this.$store.dispatch("GetUserInfo")
+      } else {
         this.loading = false;
         this.$message.error("账号或密码错误");
       }

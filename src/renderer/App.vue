@@ -5,19 +5,20 @@
 </template>
 
 <script>
-  export default {
-    name: 'wisdom'
-  }
+export default {
+  name: 'wisdom'
+}
 </script>
 
 <style>
-  /* CSS */
-  html,
-	body {
-		height: 100%;
-		width: 100%;
-		margin: 0;
-		padding: 0px;
-		overflow: hidden;
-  }
+/* CSS */
+html,
+body {
+  font-family: "微软雅黑";
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0px;
+  overflow: hidden;
+}
 </style>
