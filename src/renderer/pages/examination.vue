@@ -57,9 +57,8 @@
           <el-radio label="对"></el-radio>
           <el-radio label="错"></el-radio>
         </el-radio-group>
-
         <!-- 解答题 -->
-
+        <AnswerVditor v-model="questionType"></AnswerVditor>
       </el-main>
     </el-container>
     <el-footer>
@@ -88,9 +87,13 @@
   </div>
 </template>
 <script>
+import AnswerVditor from "../pages/AnsweVditor.vue"
 import ElementUI from 'element-ui'
 import 'element-ui/lib/theme-chalk/index.css'
 export default {
+  components: {
+    AnswerVditor
+  },
   name: 'Date',
 
   data () {
@@ -148,7 +151,7 @@ export default {
 <style>
 .prompt {
   position: relative;
-  left: 70%;
+  left: 60rem;
 }
 
 .el-header,
