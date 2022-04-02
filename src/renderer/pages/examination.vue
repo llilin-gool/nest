@@ -1,5 +1,41 @@
 <template>
   <div>
+    <!-- 考试科目选择弹窗 -->
+    <el-dialog v-model="dialogChooseExam"
+               title="考试科目选择"
+               :visible.sync="dialogChooseExam">
+      <el-form :model="chooseExamOpt">
+        <el-form-item label="考试科目"
+                      :label-width="formLabelWidth">
+          <el-select v-model="chooseExamOpt.tempOpt"
+                     placeholder="请选择考试科目">
+            <el-option v-for="(item, index) in courseList"
+                       :key="index"
+                       :label="item.name"
+                       :value="item.name"></el-option>
+            <!-- <el-option label="区域二"
+                       value="beijing"></el-option> -->
+          </el-select>
+          <el-select v-model="chooseExamOpt.tempTerm"
+                     placeholder="请选择考试类型">
+            <el-option label="期中考试"
+                       value="期中考试"></el-option>
+
+            <el-option label="期末考试"
+                       value="期末考试"></el-option>
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <div slot="footer"
+           class="dialog-footer">
+        <el-button @click="dialogChooseExam = false">取 消</el-button>
+        <el-button type="primary"
+                   @click="dialogChooseExam = false,
+                   chooseExamOpt.term=chooseExamOpt.tempTerm,
+                   chooseExamOpt.opt=chooseExamOpt.tempOpt">确 定</el-button>
+      </div>
+    </el-dialog>
+
     <el-menu class="el-menu-demo"
              mode="horizontal"
              background-color="#545c64"
@@ -11,7 +47,7 @@
       <el-menu-item>倒计时：{{h}}：{{m}} : {{s}}</el-menu-item>
       <el-menu-item class="prompt"
                     @click="prompt">提示</el-menu-item>
-      <el-menu-item>科目：计算机组成原理 半期考试</el-menu-item>
+      <el-menu-item @click="dialogChooseExam=true">科目：{{ chooseExamOpt.opt? chooseExamOpt.opt:"请选择考试科目！" }} {{ chooseExamOpt.term? chooseExamOpt.term:"" }}</el-menu-item>
     </el-menu>
 
     <el-container>
@@ -60,7 +96,6 @@
         <!-- 解答题 -->
         <AnswerVditor v-if="questionType==='解答'"
                       v-model="questionType"></AnswerVditor>
-
         <!-- 编程题 -->
         <div v-if="questionType==='编程'">
           <mavon-editor :defaultOpen="`edit`"
@@ -124,6 +159,11 @@
 import AnswerVditor from "../pages/AnsweVditor.vue"
 import ElementUI from 'element-ui'
 import 'element-ui/lib/theme-chalk/index.css'
+import {
+  getCourse,
+  getHomeworks,
+  getHomeworkInfo,
+} from "../api/user/index"
 export default {
   components: {
     AnswerVditor
@@ -141,21 +181,40 @@ export default {
         resource: ''
       },
       // 问题的类型 暂时使用
-      questionType: "编程",
+      questionType: "单选",
       // 多选框的值 是一个数组
       checklist: [],
       userInfo: [],
       code: "",
-      select: ""
+      select: "",
+      courseList: [],
+      dialogChooseExam: false,
+      formLabelWidth: '120px',
+      chooseExamOpt: {
+        opt: "",
+        term: "",
+        number: "",
+        tempOpt: "",
+        tempTerm: ""
+      }
     };
   },
   created () {
     this.countTime()
     this.$store.dispatch("GetUserInfo")
     this.handleUserInfo()
+    this.handleGetAllCourse()
+    this.handleGetHomeworks()
 
   },
   methods: {
+    testclg () {
+      console.log(this.courseList[this.chooseExamOpt.number]);
+    },
+    // 登录后就要求用户选择考试的科目
+    chooseExam () {
+      // this.$alert
+    },
     onSubmit () {
       // console.log(this.form);
       console.log(this.code, this.select);
@@ -191,8 +250,33 @@ export default {
       this.userInfo = this.$store.state.user
       console.log("AAAA");
       console.log(this.userInfo);
-    }
-  },
+    },
+
+    //获取所有课程
+    async handleGetAllCourse () {
+      let res = await getCourse();
+      if (res.data.code === 2000) {
+        this.courseList = res.data.data.map((item) => {
+          item.course.tcc_id = item._id;
+          item.course.name =
+            item.course.name + "（" + item.teacher.user.nickname + "）";
+          return item.course;
+        });
+      }
+      console.log(this.courseList);
+    },
+    //获取课程作业信息
+    async handleGetHomeworks () {
+      this.tableLoading = true;
+      let res = await getHomeworks({
+        // tcc_id: this.optCourse.tcc_id,
+        // category: this.optHomeworkType,
+        tcc_id: '621d6db25946a456a3a27d4a',
+        category: '课后作业',
+      });
+      console.log(res);
+    },
+  }
 }
 </script>
 <style>
