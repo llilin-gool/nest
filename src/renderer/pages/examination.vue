@@ -4,9 +4,9 @@
              mode="horizontal"
              background-color="#545c64"
              text-color="white">
-      <el-menu-item>曲小园 软件工程1班</el-menu-item>
+      <el-menu-item style="word-spacing:10px">{{ this.userInfo.nickname}} {{ this.userInfo.office }}</el-menu-item>
       <el-menu-item>
-        <el-avatar src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png"></el-avatar>
+        <el-avatar :src=userInfo.avatar></el-avatar>
       </el-menu-item>
       <el-menu-item>倒计时：{{h}}：{{m}} : {{s}}</el-menu-item>
       <el-menu-item class="prompt"
@@ -58,7 +58,25 @@
           <el-radio label="错"></el-radio>
         </el-radio-group>
         <!-- 解答题 -->
-        <AnswerVditor v-model="questionType"></AnswerVditor>
+        <AnswerVditor v-if="questionType==='解答'"
+                      v-model="questionType"></AnswerVditor>
+
+        <!-- 编程题 -->
+        <div v-if="questionType==='编程'">
+          <mavon-editor :defaultOpen="`edit`"
+                        :boxShadow="false"
+                        :autofocus="false"
+                        style="
+                    z-index: 1;
+                    border: 1px solid #d9d9d9;
+                    min-height: 87vh;
+                  "
+                        class="fit"
+                        :toolbarsFlag="false"
+                        v-model="code"
+                        placeholder="请在此输入源代码（Java类名需要为Main）">
+          </mavon-editor>
+        </div>
       </el-main>
     </el-container>
     <el-footer>
@@ -68,9 +86,25 @@
                      icon="el-icon-arrow-left">上一题</el-button>
           <el-button type="primary">下一题<i class="el-icon-arrow-right el-icon--right"></i></el-button>
         </el-button-group>
-        <el-button style="margin-left:2rem"
+        <el-button style="margin-left:2rem; margin-top:7px"
                    type="primary">题目列表</el-button>
-        <el-button style="margin-left:63rem"
+
+        <el-select v-if="questionType==='编程'"
+                   style="margin-top:7px"
+                   v-model="select"
+                   placeholder="请选择">
+          <el-option label="C"
+                     value="C"></el-option>
+          <el-option label="C++"
+                     value="C++"></el-option>
+          <el-option label="Java"
+                     value="Java"></el-option>
+          <el-option label="Python"
+                     value="Python"></el-option>
+
+        </el-select>
+
+        <el-button class="infoWin"
                    type="primary"
                    @click="onSubmit">提交</el-button>
       </el-row>
@@ -107,17 +141,24 @@ export default {
         resource: ''
       },
       // 问题的类型 暂时使用
-      questionType: "解答",
+      questionType: "编程",
       // 多选框的值 是一个数组
-      checklist: []
+      checklist: [],
+      userInfo: [],
+      code: "",
+      select: ""
     };
   },
   created () {
     this.countTime()
+    this.$store.dispatch("GetUserInfo")
+    this.handleUserInfo()
+
   },
   methods: {
     onSubmit () {
-      console.log(this.form);
+      // console.log(this.form);
+      console.log(this.code, this.select);
     },
     prompt () {
       this.$alert('这是一段内容，暂无提示', '提示', {
@@ -145,13 +186,19 @@ export default {
       //递归每秒调用countTime方法，显示动态时间效果
       setTimeout(this.countTime, 1000)
     },
+    //进入页面获取当前页面的用户信息
+    handleUserInfo () {
+      this.userInfo = this.$store.state.user
+      console.log("AAAA");
+      console.log(this.userInfo);
+    }
   },
 }
 </script>
 <style>
 .prompt {
-  position: relative;
-  left: 60rem;
+  position: fixed;
+  right: 5rem;
 }
 
 .el-header,
@@ -215,5 +262,12 @@ body > .el-container {
 }
 .el-checkbox__label {
   font-size: 20px;
+}
+.infoWin {
+  position: fixed;
+  right: 60px;
+  bottom: 5px;
+  width: 90px;
+  height: 35px;
 }
 </style>
