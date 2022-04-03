@@ -32,7 +32,10 @@
         <el-button type="primary"
                    @click="dialogChooseExam = false,
                    chooseExamOpt.term=chooseExamOpt.tempTerm,
-                   chooseExamOpt.opt=chooseExamOpt.tempOpt">确 定</el-button>
+                   chooseExamOpt.opt=chooseExamOpt.tempOpt,
+                   handleGetHomeworks()
+              
+                   ">确 定</el-button>
       </div>
     </el-dialog>
 
@@ -52,35 +55,54 @@
 
     <el-container>
       <el-aside width="50%">
-        <div style="padding-top:8px;padding-left:30px">
+        <!-- <div style="padding-top:8px;padding-left:30px">
           <el-tag type="info"
                   size="medium">
             1、单选
           </el-tag>
         </div>
-        <hr />
+        <hr /> -->
         <!-- 题干区域 -->
-        <div style="padding-left:30px">
+        <!-- <div style="padding-left:30px">
           <p>1.9计算机互联的主要目的是（ ）</p>
-        </div>
+        </div> -->
+        <ViewVditor :content="
+                  questionDetail.type == '编程'
+                    ? markdownToHtml(questionDetail.content)
+                    : questionDetail.content
+                "
+                    :questionMeta="`${questionDetail.index}、${questionDetail.type}`"></ViewVditor>
       </el-aside>
       <el-main>
         <!-- 作答区域 -->
-        <!-- 单选 -->
-        <el-radio-group v-if="questionType==='单选'"
-                        v-model="form.resource">
-          <el-radio label="线上品牌商赞助"></el-radio>
-          <el-radio label="线下场地免费"></el-radio>
-          <el-radio label="线上品牌赞助"></el-radio>
-          <el-radio label="线场地免费"></el-radio>
+        <!-- 单选  和  判断 -->
+        <el-radio-group v-if="
+                       questionDetail.type==='单选' ||
+                       questionDetail.type==='判断'"
+                        v-model="questionDetail.radioAnswer"
+                        v-for="(item,index) in questionDetail.answer"
+                        :key="index">
+          <!-- <el-radio :label="item.mark+' '+item.content"
+                    :value="item.mark"></el-radio> -->
+          <el-radio :value="item.mark"
+                    :label="item.content"
+                    v-if="item.content.trim() != ''">
+            <div v-html="markdownToHtml(item.mark + '、' + item.content)
+                          "></div>
+          </el-radio>
+
         </el-radio-group>
         <!-- 多选 -->
-        <el-checkbox-group v-if="questionType==='多选'"
-                           v-model="checklist">
-          <el-checkbox label="线上品牌商赞助"></el-checkbox>
-          <el-checkbox label="线下场地免费"></el-checkbox>
-          <el-checkbox label="线上品牌赞助"></el-checkbox>
-          <el-checkbox label="线场地免费"></el-checkbox>
+        <el-checkbox-group v-if=" questionDetail.type==='多选'"
+                           v-model="checklist"
+                           v-for="(item,index) in questionDetail.answer"
+                           :key="index">
+          >
+          <el-checkbox :value="item.mark"
+                       :label="item.content">
+            <div v-html="markdownToHtml(item.mark + '、' + item.content)
+                          "></div>
+          </el-checkbox>
           <!-- <el-checkbox label="禁用"
                        disabled></el-checkbox>
           <el-checkbox label="选中且禁用"
@@ -118,8 +140,10 @@
       <el-row>
         <el-button-group>
           <el-button type="primary"
-                     icon="el-icon-arrow-left">上一题</el-button>
-          <el-button type="primary">下一题<i class="el-icon-arrow-right el-icon--right"></i></el-button>
+                     icon="el-icon-arrow-left"
+                     @click="switchQuestion('right')">上一题</el-button>
+          <el-button type="primary"
+                     @click="switchQuestion('left')">下一题<i class="el-icon-arrow-right el-icon--right"></i></el-button>
         </el-button-group>
         <el-button style="margin-left:2rem; margin-top:7px"
                    type="primary">题目列表</el-button>
@@ -156,17 +180,21 @@
   </div>
 </template>
 <script>
-import AnswerVditor from "../pages/AnsweVditor.vue"
-import ElementUI from 'element-ui'
-import 'element-ui/lib/theme-chalk/index.css'
+import AnswerVditor from "../pages/AnsweVditor.vue";
+import ViewVditor from "../pages/ViewVditor.vue";
+import ElementUI from 'element-ui';
+import 'element-ui/lib/theme-chalk/index.css';
 import {
   getCourse,
   getHomeworks,
   getHomeworkInfo,
-} from "../api/user/index"
+} from "../api/user/index";
+import { marked } from "marked";
 export default {
   components: {
-    AnswerVditor
+    AnswerVditor,
+    ViewVditor
+
   },
   name: 'Date',
 
@@ -195,8 +223,21 @@ export default {
         term: "",
         number: "",
         tempOpt: "",
-        tempTerm: ""
-      }
+        tempTerm: "",
+        tcc_id: "",
+      },
+      isEnd: "",
+      homework: "",
+      questionDetail: { answer: [{ content: "" }] },
+      countQuestionType: {
+        单选: 0,
+        多选: 0,
+        判断: 0,
+        填空: 0,
+        解答: 0,
+        编程: 0,
+      },
+      homeworkInfoId: ""
     };
   },
   created () {
@@ -204,17 +245,12 @@ export default {
     this.$store.dispatch("GetUserInfo")
     this.handleUserInfo()
     this.handleGetAllCourse()
-    this.handleGetHomeworks()
-
   },
   methods: {
-    testclg () {
-      console.log(this.courseList[this.chooseExamOpt.number]);
-    },
+    // testclg () {
+    //   console.log(this.questionDetail);
+    // },
     // 登录后就要求用户选择考试的科目
-    chooseExam () {
-      // this.$alert
-    },
     onSubmit () {
       // console.log(this.form);
       console.log(this.code, this.select);
@@ -263,19 +299,222 @@ export default {
           return item.course;
         });
       }
+      console.log("所有课程");
       console.log(this.courseList);
     },
     //获取课程作业信息
     async handleGetHomeworks () {
-      this.tableLoading = true;
+      this.courseList.map((item) => {
+        if (this.chooseExamOpt.opt == item.name) {
+          this.chooseExamOpt.tcc_id = item.tcc_id;
+        }
+      })
       let res = await getHomeworks({
-        // tcc_id: this.optCourse.tcc_id,
-        // category: this.optHomeworkType,
-        tcc_id: '621d6db25946a456a3a27d4a',
-        category: '课后作业',
+        tcc_id: this.chooseExamOpt.tcc_id,
+        //  category: this.chooseExamOpt.opt,   测试携程课程设计  记得改回来
+        category: '课程设计',
       });
-      console.log(res);
+      var randomnum;
+      if (res.data.code == 2000) {
+        // 试卷乱序 获取到试卷的id 随机选出一个作为考试内容
+        if (res.data.data.length > 1) {
+          randomnum = Math.round(Math.random() * (res.data.data.length - 1))
+          console.log(res.data.data[randomnum].id);
+          this.homeworkInfoId = res.data.data[randomnum].id;
+        } else {
+          this.homeworkInfoId = res.data.data[0].id;
+        }
+        this.handleGetHomeworkInfo()
+      }
     },
+    //获取作业详细信息
+    async handleGetHomeworkInfo () {
+      //加 加载效果
+      let res = await getHomeworkInfo(this.homeworkInfoId);
+      if (res.data.code === 2000) {
+        let data = res.data.data;
+        this.isEnd = data.isEnd;
+        //过滤试题集形成题目列表
+        let questions = [];
+        data.questionSets.forEach((element) => {
+          questions = questions.concat(
+            element.questions.map((item) => {
+              item.radioAnswer = "";
+              item.questionSet_id = element._id;
+              return item;
+            })
+          );
+        });
+        //题目乱序
+        for (var i = 0; i < questions.length; i++) {
+          var iRand = parseInt(questions.length * Math.random());
+          // console.log(iRand);
+          var temp = questions[i];
+          questions[i] = questions[iRand];
+          questions[iRand] = temp;
+        }
+        //题目排序
+        let dataTempList = [];
+        questions.forEach((item) => {
+          this.countQuestionType[item.type]++;
+          if (item.type === "单选") {
+            dataTempList.push(item);
+          }
+        });
+        questions.forEach((item) => {
+          if (item.type === "多选") {
+            dataTempList.push(item);
+          }
+        });
+        questions.forEach((item) => {
+          if (item.type === "判断") {
+            dataTempList.push(item);
+          }
+        });
+        questions.forEach((item) => {
+          if (item.type === "填空") {
+            dataTempList.push(item);
+          }
+        });
+        questions.forEach((item) => {
+          if (item.type === "解答") {
+            dataTempList.push(item);
+          }
+        });
+        questions.forEach((item) => {
+          if (item.type === "编程") {
+            item.answer.push({
+              content: "",
+              explain: "",
+              mark: "参考答案",
+            });
+            item.content =
+              item.title +
+              item.description +
+              item.input_description +
+              item.output_description;
+            dataTempList.push(item);
+          }
+        });
+        questions = dataTempList;
+
+        questions.forEach((element, index) => {
+          element.index = index + 1; //记录题目序号
+          if (element.studentQA.length != 0) {
+            //学生已作答
+            element.isAnswer = true; //标记此题已作答
+            if (element.type === "填空" || element.type === "解答") {
+              //填空题和解答题处理
+              element.answer = element.studentQA[0].stuAnswer;
+            } else if (element.type === "编程") {
+              element.answer =
+                element.studentQA[0].stuAnswer.length > 0
+                  ? element.studentQA[0].stuAnswer
+                  : [
+                    {
+                      content: "",
+                      explain: "",
+                      mark: "参考答案",
+                    },
+                  ];
+            } else if (element.type === "多选") {
+              //多选题处理
+              element.answer.forEach((element2) => {
+                element2.isCorrect = false;
+                element.studentQA[0].stuAnswer.forEach((element3) => {
+                  if (element3.mark === element2.mark) {
+                    element2.isCorrect = true;
+                  }
+                });
+              });
+            } else {
+              //单选和判断处理
+              element.radioAnswer = element.studentQA[0].stuAnswer[0].mark;
+            }
+          } else {
+            //学生未作答
+            element.isAnswer = false;
+            //对多选题增加isCorrect字段
+            if (element.type === "多选") {
+              element.answer.forEach((element2) => {
+                element2.isCorrect = false;
+              });
+            }
+          }
+        });
+        data.questionList = questions;
+        data.questionsNum = questions.length;
+        this.homework = data;
+
+        this.homework.questionList.forEach((element) => {
+          //判断关键字是否存在
+          if (element.studentQA.length == 0) {
+            element.studentQA[0] = { comment: "" };
+          }
+          if (!element.studentQA[0].comment) {
+            element.studentQA[0].comment = "";
+          }
+        });
+        // console.log(this.homework.questionList[0].studentQA[0]['comment']);
+        this.questionDetail = this.homework.questionList[0];
+        // console.log(this.questionDetail)
+
+      } else {
+        this.$alert('这是一段内容，暂无提示', '提示', {
+          confirmButtonText: '确定',
+
+        });
+      }
+      console.log("这个是homework");
+      console.log(this.homework);
+      console.log("这个是questionDetail");
+      console.log(this.questionDetail);
+    },
+
+    //切换题目
+    switchQuestion (direction) {
+      // console.log(this.questionDetail);
+      // console.log(info);
+      if (direction === "left") {
+        if (this.questionDetail.index === this.homework.questionList.length) {
+          this.$message({
+            showClose: true,
+            message: '当前已是最后一题',
+            type: 'warning',
+            duration: 2000
+          });
+          return;
+        }
+
+        this.questionDetail =
+          this.homework.questionList[
+          this.questionDetail.index === this.homework.questionList.length
+            ? this.questionDetail.index - 1
+            : this.questionDetail.index
+          ];
+      } else if (direction === "right") {
+        if (this.questionDetail.index - 2 < 0) {
+          this.$message({
+            showClose: true,
+            message: '当前已是第一题',
+            type: 'warning',
+            duration: 2000
+          });
+          return;
+        }
+        this.questionDetail =
+          this.homework.questionList[
+          this.questionDetail.index - 2 < 0
+            ? this.questionDetail.index - 1
+            : this.questionDetail.index - 2
+          ];
+      }
+    },
+    //markdown解析器
+    markdownToHtml (value) {
+      return marked(value);
+    },
+
   }
 }
 </script>
@@ -330,7 +569,20 @@ body > .el-container {
   line-height: 60px;
   top: 30px;
   left: 30px;
+  /* width: 40rem; */
 }
+.el-radio div {
+  display: block;
+  float: right;
+  margin-top: -20px;
+  padding-left: 20px;
+  width: 30rem;
+}
+/* ::v-deep .el-radio {
+  display: block;
+  padding: 100px, 0;
+  margin: 10px 0;
+} */
 .el-checkbox {
   display: block;
   line-height: 23px;
