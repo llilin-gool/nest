@@ -1,5 +1,8 @@
 <template>
-  <div>
+  <div v-loading="isloading"
+       element-loading-text="拼命加载中"
+       element-loading-spinner="el-icon-loading"
+       element-loading-background="rgba(0, 0, 0, 0.8)">
     <!-- 考试科目选择弹窗 -->
     <el-dialog v-model="dialogChooseExam"
                title="考试科目选择"
@@ -54,7 +57,7 @@
     </el-menu>
 
     <el-container>
-      <el-aside width="50%">
+      <el-aside width="40%">
         <!-- <div style="padding-top:8px;padding-left:30px">
           <el-tag type="info"
                   size="medium">
@@ -84,8 +87,7 @@
                         :key="index">
           <!-- <el-radio :label="item.mark+' '+item.content"
                     :value="item.mark"></el-radio> -->
-          <el-radio :value="item.mark"
-                    :label="item.content"
+          <el-radio :label="item.mark"
                     v-if="item.content.trim() != ''">
             <div v-html="markdownToHtml(item.mark + '、' + item.content)
                           "></div>
@@ -93,36 +95,57 @@
 
         </el-radio-group>
         <!-- 多选 -->
-        <el-checkbox-group v-if=" questionDetail.type==='多选'"
-                           v-model="checklist"
-                           v-for="(item,index) in questionDetail.answer"
-                           :key="index">
-          >
-          <el-checkbox :value="item.mark"
-                       :label="item.content">
+        <div v-if="questionDetail.type==='多选'"
+             v-for="(item,index) in questionDetail.answer"
+             :key="index">
+          <el-checkbox @change="item.isCorrect = !item.isCorrect">
             <div v-html="markdownToHtml(item.mark + '、' + item.content)
                           "></div>
           </el-checkbox>
+
           <!-- <el-checkbox label="禁用"
                        disabled></el-checkbox>
           <el-checkbox label="选中且禁用"
                        disabled></el-checkbox> -->
-        </el-checkbox-group>
-
-        <!-- 判断题 -->
-        <el-radio-group v-if="questionType==='判断'"
-                        v-model="form.resource">
-          <el-radio label="对"></el-radio>
-          <el-radio label="错"></el-radio>
-        </el-radio-group>
+        </div>
+        <!-- 填空题 -->
+        <div v-if="questionDetail.type === '填空'">
+          <el-form>
+            <el-input v-for="(item, index) in questionDetail.answer"
+                      :key="index"
+                      :placeholder="'第' + (index + 1) + '空'"
+                      v-model="item.content" />
+          </el-form>
+        </div>
         <!-- 解答题 -->
-        <AnswerVditor v-if="questionType==='解答'"
-                      v-model="questionType"></AnswerVditor>
+        <div v-if="questionDetail.type === '解答' && !isEnd"
+             @click="activedEditor = questionDetail._id">
+          <AnswerVditor v-model="questionDetail.answer[0].content"></AnswerVditor>
+        </div>
+
+        <div v-if="
+                  questionDetail.type === '解答' &&
+                  isEnd &&
+                  Object.getOwnPropertyNames(questionDetail.studentQA[0]).length <= 1
+                "
+             @click="activedEditor = questionDetail._id">
+          <div style="
+                    background: red;
+                    color: white;
+                    position: absolute;
+                    top: 5%;
+                    left: 5%;
+                  ">
+            未作答
+          </div>
+        </div>
         <!-- 编程题 -->
-        <div v-if="questionType==='编程'">
+        <div v-if="questionDetail.type==='编程'"
+             @click="activedEditor = questionDetail._id">
           <mavon-editor :defaultOpen="`edit`"
                         :boxShadow="false"
                         :autofocus="false"
+                        :ref="activedEditor"
                         style="
                     z-index: 1;
                     border: 1px solid #d9d9d9;
@@ -130,7 +153,7 @@
                   "
                         class="fit"
                         :toolbarsFlag="false"
-                        v-model="code"
+                        v-model="questionDetail.answer[0].content"
                         placeholder="请在此输入源代码（Java类名需要为Main）">
           </mavon-editor>
         </div>
@@ -148,24 +171,18 @@
         <el-button style="margin-left:2rem; margin-top:7px"
                    type="primary">题目列表</el-button>
 
-        <el-select v-if="questionType==='编程'"
-                   style="margin-top:7px"
-                   v-model="select"
+        <el-select v-if="questionDetail.type==='编程'"
+                   v-model="optLanguageType"
                    placeholder="请选择">
-          <el-option label="C"
-                     value="C"></el-option>
-          <el-option label="C++"
-                     value="C++"></el-option>
-          <el-option label="Java"
-                     value="Java"></el-option>
-          <el-option label="Python"
-                     value="Python"></el-option>
-
+          <el-option v-for="(item, index) in languageTypeList"
+                     :key="index"
+                     :label="item.label"
+                     :value="item.value"></el-option>
         </el-select>
 
         <el-button class="infoWin"
                    type="primary"
-                   @click="onSubmit">提交</el-button>
+                   @click="handlePostAnswerForQuestion()">提交</el-button>
       </el-row>
 
     </el-footer>
@@ -190,6 +207,11 @@ import {
   getHomeworkInfo,
 } from "../api/user/index";
 import { marked } from "marked";
+//提交请求api
+import {
+  postAnswerForQuestion,
+  postAnswerForOJQuestion,
+} from "../api/user/index";
 export default {
   components: {
     AnswerVditor,
@@ -237,7 +259,38 @@ export default {
         解答: 0,
         编程: 0,
       },
-      homeworkInfoId: ""
+      homeworkInfoId: "",
+      activedEditor: "",
+      //编程题语言选择
+      languageTypeList: [
+        {
+          label: "C",
+          value: "c_lang_config",
+        },
+        {
+          label: "C++",
+          value: "cpp_lang_config",
+        },
+        {
+          label: "Java",
+          value: "java_lang_config",
+        },
+        {
+          label: "Python2",
+          value: "py2_lang_config",
+        },
+        {
+          label: "Python3",
+          value: "py3_lang_config",
+        },
+        {
+          label: "Go",
+          value: "go_lang_config",
+        },
+      ],
+      optLanguageType: "",  //选择后的编程语言
+      flag: true,
+      isloading: false
     };
   },
   created () {
@@ -247,13 +300,178 @@ export default {
     this.handleGetAllCourse()
   },
   methods: {
+    //答案提交请求
+    async handlePostAnswerForQuestion () {
+      //当前为编程题
+      if (this.questionDetail.type === "编程") {
+        if (this.optLanguageType === "") {
+          this.$message({
+            showClose: true,
+            message: '请先选择编程语言！',
+            type: 'warning',
+            duration: 2000
+          });
+          return;
+        }
+        if (this.questionDetail.answer[0].content.trim() === "") {
+          this.$message({
+            showClose: true,
+            message: '请输入源代码',
+            type: 'warning',
+            duration: 2000
+          });
+          return;
+        }
+        let res = await postAnswerForOJQuestion({
+          question_id: this.questionDetail._id,
+          questionSet_id: this.questionDetail.questionSet_id,
+          homework_id: this.homework._id,
+          src: this.questionDetail.answer[0].content,
+          language_config: this.optLanguageType,
+          test_case_id: this.questionDetail.test_case_id,
+        });
+        if (res.data.code === 2000) {
+          if (res.data.data.code === 4000) {
+            this.$message({
+              showClose: true,
+              message: res.data.data.msg,
+              type: 'warning',
+              duration: 2000
+            });
+            return;
+          }
+          this.questionDetail.studentQA.push({});
+          this.questionDetail.studentQA[0].score = res.data.data.finalScore;
+          this.questionDetail.isAnswer = true;
+          this.$message({
+            showClose: true,
+            message: '提交成功',
+            type: 'success',
+            duration: 1000
+          });
+        }
+
+        return;
+      }
+      //构造提交答案模板
+      let req = {
+        question_id: this.questionDetail._id, // 题目id
+        homework_id: this.homework._id, //作业id
+        questionSet_id: this.questionDetail.questionSet_id, // 试题集id
+        stuAnswer: [], //上传的答案
+      };
+      if (this.questionDetail.type === "解答") {
+        //解答题
+        if (this.questionDetail.answer[0].content.trim() === "") {
+          this.$message({
+            showClose: true,
+            message: '请输入答案后再提交',
+            type: 'warning',
+            duration: 2000
+          });
+          return;
+        }
+        req.stuAnswer.push({ content: this.questionDetail.answer[0].content });
+      } else if (this.questionDetail.type === "填空") {
+        //填空题
+        this.questionDetail.answer.forEach((element, index) => {
+
+          if (element.content.trim() === "") {
+            this.$message({
+              showClose: true,
+              message: '请输入答案后再提交',
+              type: 'warning',
+              duration: 2000
+            });
+            return;
+          }
+          req.stuAnswer.push({
+            mark: index + 1,
+            explain: "",
+            content: element.content,
+          });
+        });
+      } else if (
+        //单选题或判断题
+        this.questionDetail.type === "判断" ||
+        this.questionDetail.type === "单选"
+      ) {
+        if (this.questionDetail.radioAnswer === "") {
+          this.$message({
+            showClose: true,
+            message: '请输入答案后再提交',
+            type: 'warning',
+            duration: 2000
+          });
+          return;
+        }
+        req.stuAnswer.push({
+          mark: this.questionDetail.radioAnswer,
+        });
+      } else if (this.questionDetail.type === "多选") {
+        //多选题
+        this.questionDetail.answer.forEach((element) => {
+          if (element.isCorrect) {
+            req.stuAnswer.push({
+              mark: element.mark,
+              explain: element.explain,
+              content: element.content,
+            });
+          }
+        });
+        if (req.stuAnswer.length < 2) {
+
+          this.$message({
+            showClose: true,
+            message: '多选题至少有两个正确答案',
+            type: 'warning',
+            duration: 2000
+          });
+          return;
+        }
+      }
+
+      //发送请求
+      let res = await postAnswerForQuestion(req);
+
+      if (res.data.code === 2000) {
+        this.questionDetail.isAnswer = true;
+        if (this.flag == true) {
+          if (this.questionDetail.index < this.homework.questionList.length) {
+            //跳转到下一题
+            if (
+              this.homework.questionList[this.questionDetail.index].isAnswer ===
+              false
+            ) {
+              this.switchQuestion("left");
+            }
+          }
+        }
+        // 全局加载 限制操作
+
+        this.isloading = true
+        var timer = setTimeout(() => {
+
+          timer = void 0;
+        }, 1000);
+
+        this.isloading = false
+        this.$message({
+          showClose: true,
+          message: '提交成功',
+          type: 'success',
+          duration: 1000
+        });
+      }
+    },
     // testclg () {
     //   console.log(this.questionDetail);
     // },
     // 登录后就要求用户选择考试的科目
     onSubmit () {
       // console.log(this.form);
-      console.log(this.code, this.select);
+      // console.log(this.code, this.select);
+      console.log(this.optLanguageType);
     },
     prompt () {
       this.$alert('这是一段内容，暂无提示', '提示', {
